@@ -39,7 +39,7 @@ function App() {
       console.log("returned func being called");
       clearTimeout(timer);
       timer = setTimeout(() => {
-        console.log(event)
+        console.log(event);
         handleChange(event);
       }, timeDelay);
     };
