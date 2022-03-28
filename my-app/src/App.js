@@ -133,6 +133,7 @@ function App() {
             <input
               type="text"
               placeholder="Search"
+              value={searchTerm}
               onChange={handleChange}
             ></input>
           </label>
