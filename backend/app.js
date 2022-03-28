@@ -11,7 +11,7 @@ app.use(cors());
 
 const port = 3500;
 
-const numberOfCards = 4;
+const numberOfCards = 3;
 
 // Reading timezone xml
 const parser = new XMLParser();
@@ -29,19 +29,12 @@ for (let i = 0; i < fullData.length; i++) {
         current = current.slice(0, current.length-9);
       }
 
-      let hour = fullData[i].Hours;
-      const mins = fullData[i].Mins.toString().padStart(2,'0');
-
-      if (hour < 0) {
-        hour = '-'+Math.abs(hour).toString().padStart(2,'0');
-      } else {
-        hour = '+'+hour.toString().padStart(2,'0');
-      }
-
-      // UTC+00:00
-      formattedData.push({name: current.trim(), timezone: `${hour}:${mins}`})
+      currentTimezone = fullData[i].Hours + (fullData[i].Mins / 60);
+      formattedData.push({name: current.trim(), timezone: currentTimezone})
   }
 }
+
+console.log(formattedData);
 
 app.use(express.static("/public"));
 

@@ -1,3 +1,5 @@
+// TODO Use the stateful way of debouncing
+
 import logo from "./logo.svg";
 import "./App.css";
 import React, { useState, useEffect } from "react";
@@ -13,7 +15,24 @@ const numberOfCards = 3;
 
 function App() {
   const [timeState, setTimeState] = useState(new Date());
-  const [offset, setOffset] = useState(new Array(numberOfCards).fill(0));
+
+  const intToString = (number) => {
+    let string;
+    if (number < 0) {
+      string = "-" + Math.abs(Math.ceil(number)).toString().padStart(2, "0");
+    } else {
+      string = "+" + Math.floor(number).toString().padStart(2, "0");
+    }
+
+    return string + ":" + ((60 * number) % 1).toString().padStart(2, "0");
+  };
+
+  // timezone is an integer now, need to reformat how timezone is displayed
+  const [countries, setCountries] = useState([
+    { name: "Ghana", timezone: 0 },
+    { name: "United States (Hawaii)", timezone: -10 },
+    { name: "Marquesas Islands", timezone: -9.5 },
+  ]);
 
   // useEffect for keeping track of time and incrementing with seconds
   useEffect(() => {
@@ -21,11 +40,6 @@ function App() {
       setTimeState(new Date());
     }, 1000);
   }, []);
-
-  // initial selection
-  const [country, setCountry] = useState(
-    new Array(numberOfCards).fill({ name: "Ghana", timezone: "+00:00" })
-  );
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -36,66 +50,56 @@ function App() {
     let timer;
 
     return function (event) {
-      console.log("returned func being called");
       clearTimeout(timer);
       timer = setTimeout(() => {
-        console.log(event);
         handleChange(event);
       }, timeDelay);
     };
   };
 
   const handleChange = async (event) => {
-    console.log("SUBITTING REQUEST TO API");
-
     const search = event.target.value;
     const res = await fetch(`http://localhost:3500/${search}`, {
       method: "GET",
     });
     const result = await res.json();
 
-    const newCountry = [];
-    const newOffset = [];
+    const newCountries = [];
     for (let i = 0; i < numberOfCards; i++) {
       if (i < result.length) {
-        newCountry[i] = result[i];
-        // offset is hours in integers (including minutes)
-        const currentOffset = result[i].timezone;
-        newOffset[i] =
-          parseInt(currentOffset.slice(0, 3)) +
-          parseInt(currentOffset.slice(4, 6)) / 60.0;
-      } else {
-        newCountry[i] = {
-          name: "",
-          timezone: "",
+        newCountries[i] = {
+          name: result[i].name,
+          timezone: result[i].timezone,
         };
-        newOffset[i] = 0;
+      } else {
+        newCountries[i] = {
+          name: "",
+          timezone: 0,
+        };
       }
     }
-    setCountry(newCountry);
-    setOffset(newOffset);
+    setCountries(newCountries);
   };
 
-  const getTimeCard = (idx) => {
+  const getTimeCard = (country, idx) => {
     return (
       <div
         className="resultCard"
-        style={{ opacity: `${country[idx].name === "" ? "0" : "1"}` }}
+        style={{ opacity: `${country.name === "" ? "0" : "1"}` }}
         key={idx}
       >
         <div className="locationTime">
-          <h2 className="country">{country[idx].name}</h2>
+          <h2 className="country">{country.name}</h2>
           <h2 className="time">
-            {addHours(timeState, offset[idx]).toLocaleTimeString("en-GB")}
-            {/*{timeState.toLocaleTimeString("en-GB")}*/}
+            {addHours(timeState, country.timezone).toLocaleTimeString("en-GB")}
           </h2>
         </div>
-        <div className="timezone">{`GMT${country[idx].timezone}`}</div>
+        <div className="timezone">{`GMT${intToString(country.timezone)}`}</div>
       </div>
     );
   };
 
-  const cardsJSX = offset.map((el, i) => getTimeCard(i));
+  const cardsJSX = countries.map((country, idx) => getTimeCard(country, idx));
 
   return (
     <div className="App">
