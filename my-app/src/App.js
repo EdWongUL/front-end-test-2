@@ -1,8 +1,8 @@
-// TODO Use the stateful way of debouncing
+// Works for now, but it does not update if the string is empty...
 
 import logo from "./logo.svg";
 import "./App.css";
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 // Don't change the date object, make a NEW one
 const addHours = (date, h) => {
@@ -11,28 +11,41 @@ const addHours = (date, h) => {
   return date2;
 };
 
+// A helper method for converting from a number
+const numberToString = (number) => {
+  let string;
+  if (number < 0) {
+    string = "-" + Math.abs(Math.ceil(number)).toString().padStart(2, "0");
+  } else {
+    string = "+" + Math.floor(number).toString().padStart(2, "0");
+  }
+
+  return string + ":" + ((60 * number) % 1).toString().padStart(2, "0");
+};
+
 const numberOfCards = 3;
+
+// Hook that deals calls setDebouncedValue ONLY when the delay has passed.
+// If value has changed before the timeout has finished, then the return clears the timeout,
+// cancelling the setter.
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value]);
+
+  return debouncedValue;
+}
 
 function App() {
   const [timeState, setTimeState] = useState(new Date());
-
-  const intToString = (number) => {
-    let string;
-    if (number < 0) {
-      string = "-" + Math.abs(Math.ceil(number)).toString().padStart(2, "0");
-    } else {
-      string = "+" + Math.floor(number).toString().padStart(2, "0");
-    }
-
-    return string + ":" + ((60 * number) % 1).toString().padStart(2, "0");
-  };
-
-  // timezone is an integer now, need to reformat how timezone is displayed
-  const [countries, setCountries] = useState([
-    { name: "Ghana", timezone: 0 },
-    { name: "United States (Hawaii)", timezone: -10 },
-    { name: "Marquesas Islands", timezone: -9.5 },
-  ]);
 
   // useEffect for keeping track of time and incrementing with seconds
   useEffect(() => {
@@ -41,25 +54,36 @@ function App() {
     }, 1000);
   }, []);
 
+  // timezone is a number now, need to reformat how timezone is displayed
+  const [countries, setCountries] = useState([
+    { name: "Ghana", timezone: 0 },
+    { name: "United States (Hawaii)", timezone: -10 },
+    { name: "Marquesas Islands", timezone: -9.5 },
+  ]);
+
+  // search term is now a state
+  const [searchTerm, setSearchTerm] = useState("");
+  // call useDebounce hook and assign here. searchTerm's reference is passed here
+  // so if the value of searchTerm changes, then whatever we call it inside this hook
+  // will also change.
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
+  // this effect is only invoked if the search term has changed, and it only changes, once the
+  // timer has passed.
+  useEffect(() => {
+    fetchResults();
+  }, [debouncedSearchTerm]);
+
   const handleSubmit = (event) => {
     event.preventDefault();
   };
 
-  const handleChangeDebounce = (timeDelay) => {
-    // NOTE that this is being called everytime the screen re-renders- is this normal?
-    let timer;
-
-    return function (event) {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        handleChange(event);
-      }, timeDelay);
-    };
+  const handleChange = (event) => {
+    setSearchTerm(event.target.value);
   };
 
-  const handleChange = async (event) => {
-    const search = event.target.value;
-    const res = await fetch(`http://localhost:3500/${search}`, {
+  const fetchResults = async () => {
+    const res = await fetch(`http://localhost:3500/${searchTerm}`, {
       method: "GET",
     });
     const result = await res.json();
@@ -94,7 +118,9 @@ function App() {
             {addHours(timeState, country.timezone).toLocaleTimeString("en-GB")}
           </h2>
         </div>
-        <div className="timezone">{`GMT${intToString(country.timezone)}`}</div>
+        <div className="timezone">{`GMT${numberToString(
+          country.timezone
+        )}`}</div>
       </div>
     );
   };
@@ -109,7 +135,7 @@ function App() {
             <input
               type="text"
               placeholder="Search"
-              onChange={handleChangeDebounce(500)}
+              onChange={handleChange}
             ></input>
           </label>
         </form>
