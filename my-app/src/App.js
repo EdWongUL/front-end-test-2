@@ -1,5 +1,3 @@
-// Works for now, but it does not update if the string is empty...
-
 import logo from "./logo.svg";
 import "./App.css";
 import { useState, useEffect } from "react";
